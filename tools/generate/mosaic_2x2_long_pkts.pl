@@ -45,7 +45,7 @@ $param{'c'} = 2;
 
 #@pico_program  = ('long_pkt32.hex', '', '', 'test_tile_nop.hex');
 
-@pico_program  = ('pico_scratchpad32.hex', '', '', 'test_tile_nop.hex');
+@pico_program  = ('pico_scratchpad.hex', '', '', 'test_tile_nop.hex');
 
 #- Simulation Time
 $param{'sim_loop'}     = 260;
@@ -54,9 +54,8 @@ $param{'sim_loop'}     = 260;
 @checkers = ('check_pico_spad.sh');
 
 #- Running with Vivado
-#$param{'vivado'} = 1;
-#$param{'vivado_project'} = 1;
-
+# $param{'vivado'} = 1;             |||| FIXME: Access to board files NEEDED
+# $param{'vivado_project'} = 1;     ||||
 $param{'run_sim'} = 1;
 
 #- Generate hex code
@@ -68,7 +67,7 @@ $param{'run_sim'} = 1;
 
 chdir "../picorv_c/c_long_pkt/" or die "Couldn't change to c directory. $!\n";
 `make SRC_FNAME=pico_scratchpad`;
-$cmd = "cp pico_scratchpad32.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
+$cmd = "cp pico_scratchpad.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
 `$cmd`;
 chdir "../../generate" or die "Couldn't go to generate $!\n";
 
