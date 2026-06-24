@@ -43,33 +43,41 @@ $param{'c'} = 2;
 @tile_array = (['pico', 'spad'],
                ['loop', 'pico']);
 
-#@pico_program  = ('long_pkt32.hex', '', '', 'test_tile_nop.hex');
+@pico_program  = ('long_pkt32.hex', '', '', 'recv_pkt32.hex');
 
-@pico_program  = ('pico_scratchpad.hex', '', '', 'test_tile_nop.hex');
+# @pico_program  = ('pico_scratchpad32.hex', '', '', 'test_tile_nop.hex');
 
 #- Simulation Time
-$param{'sim_loop'}     = 260;
+$param{'sim_loop'}     = 400;
 
 #- Checkers
-@checkers = ('check_pico_spad.sh');
+@checkers = ('check_long_pkt.sh');
 
 #- Running with Vivado
-# $param{'vivado'} = 1;             |||| FIXME: Access to board files NEEDED
-# $param{'vivado_project'} = 1;     ||||
+# $param{'vivado'} = 1;
+# $param{'vivado_project'} = 1;
 $param{'run_sim'} = 1;
 
 #- Generate hex code
-#chdir "../picorv_c/c_long_pkt/" or die "Couldn't change to c directory. $!\n";
-#`make`;
-#$cmd = "cp long_pkt32.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
-#`$cmd`;
-#chdir "../../generate" or die "Couldn't go to generate $!\n";
-
 chdir "../picorv_c/c_long_pkt/" or die "Couldn't change to c directory. $!\n";
-`make SRC_FNAME=pico_scratchpad`;
-$cmd = "cp pico_scratchpad.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
+`make SRC_FNAME=long_pkt`;
+$cmd = "cp long_pkt32.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
 `$cmd`;
 chdir "../../generate" or die "Couldn't go to generate $!\n";
+
+#- Generate hex code for the receiver (drains the queue at dest_tile 9)
+chdir "../picorv_c/c_long_pkt/" or die "Couldn't change to c directory. $!\n";
+`make SRC_FNAME=recv_pkt`;
+$cmd = "cp recv_pkt32.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
+`$cmd`;
+chdir "../../generate" or die "Couldn't go to generate $!\n";
+
+# DONT -- overwrites committed version
+# chdir "../picorv_c/c/" or die "Couldn't change to c directory. $!\n";
+# `make SRC_FNAME=pico_scratchpad`;
+# $cmd = "cp pico_scratchpad32.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
+# `$cmd`;
+# chdir "../../generate" or die "Couldn't go to generate $!\n";
 
 
 ###########################################

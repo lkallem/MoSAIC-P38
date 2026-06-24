@@ -467,10 +467,6 @@ sub check_params{
     $param{'mosaic_externals'} = "$param{'mosaic_path'}/externals";
     print "INFO: Mosaic externals path: $param{'mosaic_externals'}\n";
   }
-  if (-e $param{'mosaic_externals'}){
-  }else{
-    die "ERROR: Directory $param{'mosaic_externals'} does not exist\n";
-  }
 
   #- This shouldn't be a parameter
   if (exists $param{'load_fw_file'}){ #- List of firmware files for the picos

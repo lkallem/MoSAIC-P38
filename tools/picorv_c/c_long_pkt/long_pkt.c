@@ -24,8 +24,8 @@
 #include <stdlib.h>
 #include "mq.h"
 
-void main (){
-
+void main()
+{
   uint32_t dest_tile;
   dest_tile = 9;
 
@@ -78,14 +78,10 @@ void main (){
     data2 = data2 + 1;
     qPutD(data1, data2);
   }
-
-
-
-
 }
 
 //   000-000 0 // 001-000 8
 //   000-001 1 // 001-001 9
 //
 //   pico      // spad
-//   loop      // zhw
+//   loop      // pico
