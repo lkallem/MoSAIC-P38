@@ -45,9 +45,9 @@ uint32_t main (int argc, char *argv[])
    local_tile_id = atoi(argv[1]);
 	
 	remote_tile_id = 8;
-	//- Write Scratchpad
+	//- Write Scratchpad using mPut
 	wr_mem(remote_tile_id, local_tile_id, it, 1);
-	//- Read Scratchpad
+	//- Read Scratchpad using mGet
 	rd_mem(remote_tile_id, local_tile_id, it, 1);
 
 

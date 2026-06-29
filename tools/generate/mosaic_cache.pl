@@ -58,12 +58,17 @@ $param{'c_file'} = $c_file;
 $param{'instruction_mem'} = 1;
 
 #-- Generate tile array
-($ta, $pp) = generic_tile_array(\%param);
+($ta, $pp) = generic_tile_array(\%param); # Full of Picos
 @tile_array = @{$ta};
 @pico_program = @{$pp};
 $tile_array[0][1] = 'spad';
 $pico_program[1]  = 'nop.hex'; # spad
 print_tile_array(\%param, \@tile_array, \@pico_program);
+
+#   pico  spad  pico  pico
+#   pico  pico  pico  pico
+#   pico  pico  pico  pico
+#   pico  pico  pico  pico
 
 #-- Simulation Time
 $param{'sim_loop'} = 800;

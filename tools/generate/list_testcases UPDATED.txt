@@ -25,7 +25,7 @@ List of testcases:
 
 ICARUS
 
-- mosaic_2x2.pl: PASS ---> PASS 2026
+- mosaic_2x2.pl: PASS --> PASS 2026
 The simplest testcase with 4 tiles: pico, spad, loop.
 Runs the firmware located in the directory <>/src/Tile.HDL/picorv32_tile/firmware
 A checkers verifies that data is written in the scratchpad and the 
@@ -40,10 +40,10 @@ The first checker should pass (pico-scratchpad)
 The second checker fails because we don't have a dram model.
 UPDATE: Both checkers pass.
 
-To run:
-mosaic_2x2_nocbw.pl
-mosaic_2x2_u250.pl
-
+mosaic_2x2_nocbw.pl : PASS 2026
+This testcase is used to verify functionality 
+of the NoC BW and BWB parameters to change the 
+NOC bus width. BW is changed to 64 (verified through vivado). 
 
 -mosaic_4x4_tile_mem_mgr.pl: PASS --> PASS 2026
 Example of a larger mosaic with only PICORV32 tiles.
@@ -64,7 +64,7 @@ Similar to previous testcases, but for vivado
 -mosaic_2x2_vivado.pl : GOOD, June 2026
 -mosaic_2x2_tile_mem_mgr_vivado.pl : GOOD, June 2026
 
--mosaic_2x2_ddr4_8cache_vivado.pl : GOOD. June 2026
+-mosaic_2x2_ddr4_8cache_vivado.pl : GOOD, June 2026
 Shows how to modify the cache size.
 
 -mosaic_2x2_ddr4_pkt_vivado.pl : GOOD, June 2026
@@ -72,7 +72,7 @@ It is a very fast test, the PICOs don't do anything
 It only injects packets that go to the tile 
 memory manager
 
--mosaic_2x2_u250.pl      
+-mosaic_2x2_u250.pl : Fails checker
 Shows how to setup the development board.
 
 -mosaic_cache.pl
