@@ -26,32 +26,47 @@
 // ////////////////////////////////////////////////////////////////
 // Description : Receiver for the long_pkt test. Runs on the
 //               destination pico (dest_tile = 9). Drains the inbound
-//               message queue produced by long_pkt.c and stores every
-//               received word into a global array so that it lands in
-//               the tile's dp_ram and is dumped to tile_11.dat for
-//               check_long_pkt.sh.
+//               message queue produced by long_pkt.c and forwards each
+//               payload word to the spad on tile 8 via mPut, so the
+//               values land in that spad's dp_ram and are dumped to
+//               tile_01.dat for check_long_pkt.sh.
 //
-//   Queue read protocol (matches send_msg.c / pico_add3.c):
-//     - qWait(q, tmp) blocks until the queue head is valid. It peeks
-//       the head word but does NOT advance the read pointer.
-//     - qGet(q, dst)  returns the head word and advances the read
-//       pointer by one (the actual "pop").
+// Queue read protocol:
+//   - qWait(q, tmp) blocks until the queue head is valid. It peeks the
+//     head word but does NOT advance the read pointer.
+//   - qGet(q, dst)  returns the head word and advances the read pointer
+//     by one (the actual "pop").
 //
-//   long_pkt.c emits exactly 2 FIFO words per C call, in order:
-//     - qPut          -> [header,      0xcafecafe]
-//     - qPutH (code N) -> [long-header, 0x0]
-//     - qPutD          -> [data1 cafe*, data2 baca*]
-//   with N = 1 and 2^(N-1) qPut calls per short packet.
-//   with N = 2,3,4,5 and 2^(N-1) qPutD calls per long packet.
+// This file mirrors long_pkt.c's send sequence call-for-call, so the
+// receive side never needs to decode the binary header fields at
+// runtime -- it just knows, from the sender's fixed structure, how
+// many words each call produced and what to do with them:
 //
-//   Total words pushed = 1 (one word / short packet) + 2 (1 two word packet) 
-//                        + 4 (2 two word packet) + 8 (2 two word packet) 
-//                        + 16 (4 two word packet)
-
-//   Of these the data payload is 32 'cafe*' words (data1 chain) + 31
-//   'baca*' words (data2 chain). We store ALL 63 words; header / zero
-//   words do not contain 'caf' or 'bac', so check_long_pkt.sh still
-//   counts exactly 32 'caf' and 31 'bac'.
+//   long_pkt.c call         FIFO words produced      recv_pkt.c mirror
+//   ----------------------  -----------------------  --------------------------
+//   qPut(dest, data1)       [header, data1]           qGetPut(&data1)
+//   qPutH(dest, code)       [long-header, 0x0]         qGetPutH()
+//   qPutD(data1, data2)     [data1, data2]             qGetPutD(&data1, &data2)
+//
+// Header / filler words are popped and discarded (not forwarded); only
+// the real payload words (the values long_pkt.c actually computed) are
+// forwarded via mPut. That is exactly:
+//   - qPut:            1 call  -> 1 payload word  (0xcafecafe)
+//   - qPutH+qPutD x1:  1 call  -> 2 payload words
+//   - qPutH+qPutD x2:  1 call  -> 4 payload words
+//   - qPutH+qPutD x4:  1 call  -> 8 payload words
+//   - qPutH+qPutD x8:  1 call  -> 16 payload words
+//   - qPutH+qPutD x16: 1 call  -> 32 payload words
+//   Total payload words  = 1 + 2 + 4 + 8 + 16 + 32 = 63
+//   (32 words from the data1/cafe chain, 31 from the data2/baca chain)
+//
+// Total FIFO words actually popped from the queue (payload + the
+// header/filler words that come with each qPut/qPutH call):
+//   - 1 qPut     x 2 words           =  2
+//   - 5 qPutH    x 2 words           = 10
+//   - 31 qPutD   x 2 words           = 62
+//   ---------------------------------------
+//   Total                            = 74 words popped via qGet
 // ////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
@@ -60,23 +75,126 @@
 //- Source queue id (local inbound queue)
 #define SRC_Q 0
 
-//- Total number of words pushed into this tile's queue by long_pkt.c.
-#define TOTAL_WORDS 63
-
-//- Storage for received words. Declared volatile + global so the
-//- compiler keeps it in dp_ram (which is dumped to tile_11.dat).
-volatile uint32_t recv_buf[TOTAL_WORDS];
+void qGetWait(uint32_t *data);
+void qGetPut(uint32_t *data);
+void qGetPutH(void);
+void qGetPutD(uint32_t *data1, uint32_t *data2);
+void mPutAddrInc(uint32_t data, uint32_t *addr);
+uint32_t addr_calc(uint32_t destination_tile_id, uint32_t local_tile_id);
 
 void main (){
 
-  uint32_t tmp;   //- Throwaway for qWait peek
+  uint32_t addr;
+  uint32_t local_tile_id;         //- This tile's id (9)
+  uint32_t destination_tile_id;   //- The spad's id (8)
+  uint32_t data1, data2;
 
-  //- Drain every word. qWait blocks until the head is valid, then
-  //- qGet pops it into recv_buf. Doing qWait before each qGet
-  //- guarantees we never pop ahead of the producer.
-  for (int i = 0; i < TOTAL_WORDS; i = i + 1){
-    qWait(SRC_Q, tmp);            //- block until head word is valid
-    qGet(SRC_Q, recv_buf[i]);     //- pop head word into dp_ram
+  //- we are tile 9
+  local_tile_id = 9;
+  //- we want to send it to the SPAD on tile 8
+  destination_tile_id = 8;
+
+  addr = addr_calc(destination_tile_id, local_tile_id);
+
+  //- Mirror: qPut(dest_tile, data1) -> [header, data1]
+  qGetPut(&data1);
+  mPutAddrInc(data1, &addr);
+
+  //- Mirror: pkt_sz_code=1; qPutH(dest_tile,1); qPutD(data1,data2);
+  qGetPutH();
+  qGetPutD(&data1, &data2);
+  mPutAddrInc(data1, &addr);
+  mPutAddrInc(data2, &addr);
+
+  //- Mirror: pkt_sz_code=2; qPutH(dest_tile,2); 2x qPutD(...)
+  qGetPutH();
+  for (int i=0; i<2; i=i+1){
+    qGetPutD(&data1, &data2);
+    mPutAddrInc(data1, &addr);
+    mPutAddrInc(data2, &addr);
   }
 
+  //- Mirror: pkt_sz_code=3; qPutH(dest_tile,3); 4x qPutD(...)
+  qGetPutH();
+  for (int i=0; i<4; i=i+1){
+    qGetPutD(&data1, &data2);
+    mPutAddrInc(data1, &addr);
+    mPutAddrInc(data2, &addr);
+  }
+
+  //- Mirror: pkt_sz_code=4; qPutH(dest_tile,4); 8x qPutD(...)
+  qGetPutH();
+  for (int i=0; i<8; i=i+1){
+    qGetPutD(&data1, &data2);
+    mPutAddrInc(data1, &addr);
+    mPutAddrInc(data2, &addr);
+  }
+
+  //- Mirror: pkt_sz_code=5; qPutH(dest_tile,5); 16x qPutD(...)
+  qGetPutH();
+  for (int i=0; i<16; i=i+1){
+    qGetPutD(&data1, &data2);
+    mPutAddrInc(data1, &addr);
+    mPutAddrInc(data2, &addr);
+  }
+
+}
+
+//- Blocks until the queue head is valid (qWait), then pops it (qGet).
+void qGetWait(uint32_t *data) {
+  uint32_t tmp;   //- Throwaway for qWait peek
+  qWait(SRC_Q, tmp);      //- block until head word is valid
+  qGet(SRC_Q, *data);     //- pop head word
+}
+
+//- Mirrors a short qPut(dest, data): pops [header, data] and returns
+//- only the actual data word (the header is discarded).
+void qGetPut(uint32_t *data) {
+  uint32_t header;
+  qGetWait(&header);   //- discard header
+  qGetWait(data);       //- real payload word
+}
+
+//- Mirrors a qPutH(dest, code): pops [long-header, 0x0 filler] and
+//- discards both (the receiver already knows the packet-size sequence
+//- from mirroring long_pkt.c's structure, so it doesn't need to decode
+//- the header's embedded size code).
+void qGetPutH(void) {
+  uint32_t header1;
+  uint32_t filler;
+  qGetWait(&header1);
+  qGetWait(&filler);
+}
+
+//- Mirrors a qPutD(data1, data2): pops the two payload words directly.
+void qGetPutD(uint32_t *data1, uint32_t *data2) {
+  qGetWait(data1);
+  qGetWait(data2);
+}
+
+//- Forwards a received payload word to the spad via mPut, then
+//- advances the destination address by one word.
+void mPutAddrInc (uint32_t data, uint32_t *addr) {
+  mPut(data, *addr);
+  *addr = *addr + 1;
+}
+
+uint32_t addr_calc (uint32_t destination_tile_id, uint32_t local_tile_id) {
+  //- Declare variables for address calculation
+  uint32_t destination_tile_id_s;
+  uint32_t local_tile_id_s;
+
+  uint32_t mem_location;
+  uint32_t remote_mem_location1;
+  uint32_t remote_mem_address1;
+
+  local_tile_id_s = local_tile_id << 12; // shift for hardware
+  destination_tile_id_s = destination_tile_id << 12; // shift for hardware
+
+  mem_location = 1024 + (local_tile_id*180);
+
+  remote_mem_location1 = mem_location; //+mem_offset_remote;
+  remote_mem_address1  = remote_mem_location1+destination_tile_id_s; // Real memory location
+
+  return remote_mem_address1;
 }

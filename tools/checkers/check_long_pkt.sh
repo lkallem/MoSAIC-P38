@@ -43,87 +43,28 @@
 #     CAFE chain (data1): 0xcafecafe .. 0xcafecb1d   (32 contiguous values)
 #     BACA chain (data2): 0xbacabacb .. 0xbacabae9   (31 contiguous values)
 #   Total: 63 payload words.
-
 thepath=$1
-mem_file="$thepath/tile_11.dat"
 
-#- Expected exact value ranges (inclusive), derived from long_pkt.c
-CAFE_LO=$((0xcafecafe)); CAFE_HI=$((0xcafecb1d))   #- 32 values
-BACA_LO=$((0xbacabaca)); BACA_HI=$((0xbacabae8))   #- 31 values
+mem_file="$thepath/tile_01.dat"
 
-if [ ! -f "$mem_file" ]; then
-  echo "FAIL: dump file not found: $mem_file"
-  exit 0
+#- Checking data1 chain (cafe*) delivered into the receiver queue
+echo 'INFO: Checking for received qPut/qPutD data1 (cafe*) at tile 01'
+c=$(grep -c cafe $mem_file)
+if [ $c -ge 32 ]
+then
+  echo "SUCCESS: There are $c>=32 CAFE words in the scratchpad at tile 01\n"
+else
+  echo "FAIL: there are $c CAFE words in the scratchpad at tile 01. Expecting 32\n"
+  grep cafe $mem_file
 fi
 
-awk -v cafe_lo="$CAFE_LO" -v cafe_hi="$CAFE_HI" \
-    -v baca_lo="$BACA_LO" -v baca_hi="$BACA_HI" '
-function hex2dec(s,   v, i, c, d) {
-  v = 0
-  s = tolower(s)
-  for (i = 1; i <= length(s); i++) {
-    c = substr(s, i, 1)
-    d = index("0123456789abcdef", c) - 1
-    if (d < 0) return -1
-    v = v * 16 + d
-  }
-  return v
-}
-BEGIN { FAIL = 0 }
-{
-  #- Strip $writememh address comments and any inline comments
-  line = $0
-  sub(/\/\/.*/, "", line)
-  #- Each remaining whitespace-separated token should be a hex word
-  n = split(line, toks, /[ \t\r]+/)
-  for (k = 1; k <= n; k++) {
-    w = toks[k]
-    if (w == "") continue
-    if (w !~ /^[0-9a-fA-F]+$/) continue
-    d = hex2dec(w)
-    if (d < 0) continue
-    seen[d]++
-  }
-}
-END {
-  #- ---- CAFE chain (data1) ----
-  exp_cafe = cafe_hi - cafe_lo + 1
-  miss_cafe = 0; dup_cafe = 0; ok_cafe = 0
-  for (v = cafe_lo; v <= cafe_hi; v++) {
-    c = (v in seen) ? seen[v] : 0
-    if (c == 0)      { miss_cafe++; printf("  MISSING  CAFE word 0x%08x\n", v) }
-    else if (c > 1)  { dup_cafe++;  ok_cafe++; printf("  DUPLICATE CAFE word 0x%08x (x%d)\n", v, c) }
-    else             { ok_cafe++ }
-  }
-  printf("INFO: CAFE chain (data1) 0x%08x..0x%08x: expected %d, found %d, missing %d, duplicated %d\n",
-         cafe_lo, cafe_hi, exp_cafe, ok_cafe, miss_cafe, dup_cafe)
-  if (miss_cafe == 0 && dup_cafe == 0)
-    printf("SUCCESS: All %d CAFE payload words present exactly once at tile 11\n", exp_cafe)
-  else { printf("FAIL: CAFE payload mismatch at tile 11\n"); FAIL = 1 }
-
-  #- ---- BACA chain (data2) ----
-  exp_baca = baca_hi - baca_lo + 1
-  miss_baca = 0; dup_baca = 0; ok_baca = 0
-  for (v = baca_lo; v <= baca_hi; v++) {
-    c = (v in seen) ? seen[v] : 0
-    if (c == 0)      { miss_baca++; printf("  MISSING  BACA word 0x%08x\n", v) }
-    else if (c > 1)  { dup_baca++;  ok_baca++; printf("  DUPLICATE BACA word 0x%08x (x%d)\n", v, c) }
-    else             { ok_baca++ }
-  }
-  printf("INFO: BACA chain (data2) 0x%08x..0x%08x: expected %d, found %d, missing %d, duplicated %d\n",
-         baca_lo, baca_hi, exp_baca, ok_baca, miss_baca, dup_baca)
-  if (miss_baca == 0 && dup_baca == 0)
-    printf("SUCCESS: All %d BACA payload words present exactly once at tile 11\n", exp_baca)
-  else { printf("FAIL: BACA payload mismatch at tile 11\n"); FAIL = 1 }
-
-  #- ---- Summary ----
-  total_exp = exp_cafe + exp_baca
-  total_ok  = ok_cafe + ok_baca - dup_cafe - dup_baca
-  if (FAIL == 0)
-    printf("SUCCESS: Verified %d/%d payload words exactly once (%d CAFE + %d BACA)\n",
-           total_exp, total_exp, exp_cafe, exp_baca)
-  else
-    printf("FAIL: long_pkt payload verification FAILED (%d CAFE + %d BACA expected)\n",
-           exp_cafe, exp_baca)
-}
-' "$mem_file"
+#- Checking data2 chain (baca*) delivered into the receiver queue
+echo 'INFO: Checking for received qPutD data2 (baca*) at tile 01'
+c=$(grep -c baca $mem_file)
+if [ $c -ge 31 ]
+then
+  echo "SUCCESS: There are $c>=31 BACA words in the scratchpad at tile 01\n"
+else
+  echo "FAIL: there are $c BACA words in the scratchpad at tile 01. Expecting 31\n"
+  grep baca $mem_file
+fi

@@ -23,6 +23,7 @@
 # *************************************************************************
 
 use lib "$ENV{PWD}";
+use lib "$ENV{PWD}/../picorv_c/c_long_pkt";
 use gen_mosaic;
 use POSIX;
 
@@ -35,6 +36,11 @@ use POSIX;
 ###########################################
 #- Test case: Modify
 ###########################################
+#- Set the path for the hex code
+$path = `pwd`;
+chomp($path);
+$fw_path = "$path/../picorv_c/c_long_pkt";
+$param{'firmware_path'} = $fw_path; 
 
 #- 2x2 Tile array
 $param{'r'} = 2;
@@ -44,6 +50,7 @@ $param{'c'} = 2;
                ['loop', 'pico']);
 
 @pico_program  = ('long_pkt32.hex', '', '', 'recv_pkt32.hex');
+# @pico_program  = ('recv_pkt32.hex', '', '', 'long_pkt32.hex');
 
 # @pico_program  = ('pico_scratchpad32.hex', '', '', 'test_tile_nop.hex');
 
@@ -54,22 +61,14 @@ $param{'sim_loop'}     = 400;
 @checkers = ('check_long_pkt.sh');
 
 #- Running with Vivado
-# $param{'vivado'} = 1;
-# $param{'vivado_project'} = 1;
+$param{'vivado'} = 1;
+$param{'vivado_project'} = 1;
 $param{'run_sim'} = 1;
 
 #- Generate hex code
 chdir "../picorv_c/c_long_pkt/" or die "Couldn't change to c directory. $!\n";
 `make SRC_FNAME=long_pkt`;
-$cmd = "cp long_pkt32.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
-`$cmd`;
-chdir "../../generate" or die "Couldn't go to generate $!\n";
-
-#- Generate hex code for the receiver (drains the queue at dest_tile 9)
-chdir "../picorv_c/c_long_pkt/" or die "Couldn't change to c directory. $!\n";
 `make SRC_FNAME=recv_pkt`;
-$cmd = "cp recv_pkt32.hex ../../../src/Tile.HDL/picorv32_tile/firmware/";
-`$cmd`;
 chdir "../../generate" or die "Couldn't go to generate $!\n";
 
 # DONT -- overwrites committed version
