@@ -365,7 +365,7 @@ sub gen_vivado_script{
    open (my $FH, '>', $file ) or die "Couldn't open file $file !$.\n";
    my %board = %{$board_info{$param{'board'}}};
    #- Create the project
-   print $FH "set_param board.repoPaths \"$param{'mosaic_externals'}/open-nic-shell/board_files\"\n";
+   print $FH "set_param board.repoPaths \"$param{'mosaic_externals'}/open-nic-shell-lbnl/board_files\"\n";
    print $FH "create_project -force mosaic $param{'launch_path'}/mosaic -part $board{'part'}\n";
    #- Set the board
    print $FH "set_property board_part $board{'board_part'} [current_project]\n";
