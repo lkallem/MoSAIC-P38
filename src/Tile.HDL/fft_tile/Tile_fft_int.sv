@@ -17,7 +17,7 @@ module Tile_fft_int#(
    parameter OFFSET_SZ         = 12,
    parameter XY_SZ             =  3,
    parameter NOC_BUFFER_ADDR_W =  8
-)(
+   )(
    input  logic clk_control,
 	input  logic clk_line,
 	input  logic clk_line_rst_high,
@@ -182,7 +182,7 @@ acc_fft_sw32#(
 
 tile_noc#(
   .BW (BW)
-tile_noc (
+) tile_noc (
    .HsrcId                       ({myY_line,myX_line}),
    .stream_in_TVALID             (stream_in_TVALID),
    .stream_in_TREADY             (stream_in_TREADY),

@@ -24,6 +24,7 @@
 
 use lib "$ENV{PWD}";
 use lib "$ENV{PWD}/../picorv_c/c_long_pkt";
+use lib "$ENV{PWD}/../picorv_c/c_long_pkt";
 use gen_mosaic;
 use POSIX;
 
@@ -37,12 +38,6 @@ use POSIX;
 #- Test case: Modify
 ###########################################
 
-#- Set the path for the hex code
-$path = `pwd`;
-chomp($path);
-$fw_path = "$path/../picorv_c/c_long_pkt";
-$param{'firmware_path'} = $fw_path; 
-
 #- 2x2 Tile array
 $param{'r'} = 2;
 $param{'c'} = 2;
@@ -51,7 +46,6 @@ $param{'c'} = 2;
                ['loop', 'spad']);
 
 @pico_program  = ('long_pkt32.hex', '', '', 'recv_pkt32.hex');
-# @pico_program  = ('long_pkt32.hex', '', '', '');
 
 # @pico_program  = ('pico_scratchpad32.hex', '', '', 'test_tile_nop.hex');
 
@@ -62,6 +56,9 @@ $param{'sim_loop'}     = 600;
 @checkers = ('check_long_pkt.sh');
 
 #- Running with Vivado - do not turn off Vivado, simulation does not work in Icarus.
+$param{'vivado'} = 1;
+$param{'vivado_project'} = 1;
+#- Running with Vivado
 $param{'vivado'} = 1;
 $param{'vivado_project'} = 1;
 $param{'run_sim'} = 1;

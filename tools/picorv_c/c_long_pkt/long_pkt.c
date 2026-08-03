@@ -28,6 +28,7 @@ void main()
 {
   uint32_t dest_tile;
   dest_tile = 9;
+  // dest_tile = 0;
 
   uint32_t data1, data2;
   data1 = 0xcafecafe;
