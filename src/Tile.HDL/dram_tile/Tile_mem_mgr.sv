@@ -154,7 +154,7 @@ logic           stream_in_local_in_TREADY;
 logic mem_valid_axi;
 logic mem_wstrb_axi; 
 logic [BW_AXI-1:0] mem_addr_axi;  
-logic [BWB_AXI-1:0] mem_wdata_axi;
+logic [BW_AXI-1:0] mem_wdata_axi;
 //logic [31:0] mem_rdata_axi;  //FIXME
 logic [S_AXI_ID_SZ-1:0] mem_req_id_axi;
 

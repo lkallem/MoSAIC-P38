@@ -54,8 +54,8 @@ It blocks. FIXME.
 VIVADO
 
 Similar to previous testcases, but for vivado
--mosaic_2x2_vivado.pl : GOOD
--mosaic_2x2_tile_mem_mgr_vivado.pl : GOOD
+-mosaic_2x2_vivado.pl
+-mosaic_2x2_tile_mem_mgr_vivado.pl
 
 -mosaic_2x2_ddr4_8cache_vivado.pl 
 Shows how to modify the cache size.
