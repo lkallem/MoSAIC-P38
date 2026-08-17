@@ -21,6 +21,7 @@
 //
 // ************************************************************************ */
 
+
 /* ////////////////////////////////////////////////////////////////
 // Author      : Patricia Gonzalez-Guerrero
 // Date        : April 19 2022
@@ -41,10 +42,9 @@ OUTPUT_FORMAT("elf32-littleriscv", "elf32-littleriscv",
 	      "elf32-littleriscv")
 OUTPUT_ARCH(riscv)
 ENTRY(_start)
+
 SECTIONS
 {
-   /*LPGG: Change 10000 to 200 */
-  . = 0x00000200;
   .text           :
   {
     *(.text)
@@ -55,12 +55,7 @@ SECTIONS
     *(.stub .text.* .gnu.linkonce.t.*)
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
-  }
-  /*LPGG: make the initital point explicit*/
-  /*. = 0xFA0;*/
-  /*. = 0x15E0;*/
-  /*. = 0x2200;*/
-  . = 0x2600;
+  } > LOCAL
   .init           :
   {
     KEEP (*(SORT_NONE(.init)))
@@ -74,12 +69,12 @@ SECTIONS
   PROVIDE (__etext = .);
   PROVIDE (_etext = .);
   PROVIDE (etext = .);
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } > LOCAL
   .rodata1        : { *(.rodata1) }
   .sdata2         :
   {
     *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
-  }
+  } 
   .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
   .eh_frame_hdr : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
   .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) *(.eh_frame.*) }
@@ -95,7 +90,7 @@ SECTIONS
   /*. = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));*/
   . = DATA_SEGMENT_ALIGN (0x100, 0x1000);
   /* Exception handling  */
-  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) *(.eh_frame.*) }
+  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) *(.eh_frame.*) } > LOCAL
   .gnu_extab      : ONLY_IF_RW { *(.gnu_extab) }
   .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }
   .exception_ranges   : ONLY_IF_RW { *(.exception_ranges .exception_ranges*) }
@@ -107,21 +102,21 @@ SECTIONS
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array))
     PROVIDE_HIDDEN (__preinit_array_end = .);
-  }
+  } > LOCAL
   .init_array     :
   {
     PROVIDE_HIDDEN (__init_array_start = .);
     KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
     KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
     PROVIDE_HIDDEN (__init_array_end = .);
-  }
+  } > LOCAL
   .fini_array     :
   {
     PROVIDE_HIDDEN (__fini_array_start = .);
     KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
     KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))
     PROVIDE_HIDDEN (__fini_array_end = .);
-  }
+  } > LOCAL
   .ctors          :
   {
     /* gcc uses crtbegin.o to find the start of
@@ -159,19 +154,17 @@ SECTIONS
   {
     *(.data .data.* .gnu.linkonce.d.*)
     SORT(CONSTRUCTORS)
-  }
-  .data1          : { *(.data1) }
+  } > LOCAL
   .got            : { *(.got.plt) *(.igot.plt) *(.got) *(.igot) }
   /* We want the small data sections together, so single-instruction offsets
      can access them all, and initialized data all before uninitialized, so
      we can shorten the on-disk segment size.  */
   .sdata          :
   {
- /* LPGG: Change 800 for 200*/
     __global_pointer$ = . + 0x200;
     *(.srodata.cst16) *(.srodata.cst8) *(.srodata.cst4) *(.srodata.cst2) *(.srodata .srodata.*)
     *(.sdata .sdata.* .gnu.linkonce.s.*)
-  }
+  } > LOCAL
   _edata = .; PROVIDE (edata = .);
   . = .;
   __bss_start = .;
@@ -192,7 +185,7 @@ SECTIONS
       FIXME: Why do we need it? When there is no .bss section, we don't
       pad the .data section.  */
    . = ALIGN(. != 0 ? 32 / 8 : 1);
-  }
+  } > LOCAL
   . = ALIGN(32 / 8);
   . = SEGMENT_START("ldata-segment", .);
   . = ALIGN(32 / 8);
@@ -239,4 +232,6 @@ SECTIONS
   .debug_addr     0 : { *(.debug_addr) }
   .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
   /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+  .myspad  : { KEEP(*(.myspad)) } > SPAD
+  .myacc1  : { KEEP(*(.myspad)) } > ACC1
 }

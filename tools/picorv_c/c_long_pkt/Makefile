@@ -30,30 +30,33 @@ OC = $(RISCV_TOOLS_PREFIX)objcopy
 LDFLAGS = -Wl,--gc-sections
 LDLIBS = -lstdc++
 
-SRC_FNAME = long_pkt
+SRC_FNAME   = long_pkt
+START_FNAME = start
+LD_FNAME    = riscv
 
-$(SRC_FNAME).hex: $(SRC_FNAME).elf start.elf
-	$(OC) -O verilog start.elf start.tmp
+$(SRC_FNAME).hex: $(SRC_FNAME).elf $(START_FNAME).elf
+	$(OC) -O verilog $(START_FNAME).elf $(START_FNAME).tmp
 	$(OC) -O verilog $(SRC_FNAME).elf $(SRC_FNAME).tmp
-	cat start.tmp $(SRC_FNAME).tmp > $(SRC_FNAME).hex
+	cat $(START_FNAME).tmp $(SRC_FNAME).tmp > $(SRC_FNAME).hex
 	python3 hex8tohex32.py $(SRC_FNAME).hex > $(SRC_FNAME)32.hex
 
 $(SRC_FNAME).elf: $(SRC_FNAME).o
 	$(CC) -c -o $^ $(SRC_FNAME).c
-	$(CC) $(LDFLAGS) -o $@ $^ -T riscv.ld
+	$(CC) $(LDFLAGS) -ffreestanding -o $@ $^ -Tmem_layout.ld -T$(LD_FNAME).ld
 	chmod -x $(SRC_FNAME).elf
 	$(OD) -dC $@ > $(SRC_FNAME).dissasembled
 	$(RE) -a  $@ > $(SRC_FNAME).readelf
 
-start.elf: start.S start.ld
-	$(CC) -nostdlib -o start.elf start.S -T start.ld $(LDLIBS)
-	chmod -x start.elf
+$(START_FNAME).elf: $(START_FNAME).S $(START_FNAME).ld
+	$(CC) -nostdlib -o $(START_FNAME).elf $(START_FNAME).S -T $(START_FNAME).ld $(LDLIBS)
+	chmod -x $(START_FNAME).elf
+	$(OD) -dC $@ > $(START_FNAME).dissasembled
+	$(RE) -a  $@ > $(START_FNAME).readelf
 
 clean:
-	rm -rf *.o *.d *.elf start.elf *.map *.bin *.dissasembled *.readelf *.h.gch *.tmp 
+	rm -rf *.o *.d *.elf $(START_FNAME).elf *.map *.bin *.dissasembled *.readelf *.h.gch *.tmp 
 
 clean_all: clean
 	rm -rf *32.hex
 
 .PHONY: test clean clean_all
-

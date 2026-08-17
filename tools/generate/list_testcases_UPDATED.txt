@@ -20,18 +20,22 @@
 # to do so.
 #
 # *************************************************************************
+#
+#     Check-up by Laura Kallem, August 2026
+#
+# *************************************************************************
 
 List of testcases:
 
 ICARUS
 
-- mosaic_2x2.pl: PASS --> PASS 2026
+- mosaic_2x2.pl: PASS --> PASS
 The simplest testcase with 4 tiles: pico, spad, loop.
 Runs the firmware located in the directory <>/src/Tile.HDL/picorv32_tile/firmware
 A checkers verifies that data is written in the scratchpad and the 
 picorv local memory. 
 
--mosaic_2x2_tile_mem_mgr.pl: PASS --> PASS 2026
+-mosaic_2x2_tile_mem_mgr.pl: PASS --> PASS
 Adds the tile_mem_mgr module which is the interfaces 
 with DRAM.
 Since it runs with ICARUS uses a simple always block to 
@@ -40,39 +44,39 @@ The first checker should pass (pico-scratchpad)
 The second checker fails because we don't have a dram model.
 UPDATE: Both checkers pass.
 
-mosaic_2x2_nocbw.pl : PASS 2026
+mosaic_2x2_nocbw.pl : PASS
 This testcase is used to verify functionality 
 of the NoC BW and BWB parameters to change the 
 NOC bus width. BW is changed to 64 (verified through vivado). 
 
--mosaic_4x4_tile_mem_mgr.pl: PASS --> PASS 2026
+-mosaic_4x4_tile_mem_mgr.pl: PASS --> PASS
 Example of a larger mosaic with only PICORV32 tiles.
 Shows how to add firmware that is in a diferent location.
 The check_pkt_cache should pass
 because it is only interacting with the cache
 and does not require a real DDR4 model.
 
--mosaic_2x2_long_pkt.pl: FAILS --> PASS IN VIVADO, FAILS IN TERMINAL 2026
+-mosaic_2x2_long_pkt.pl: FAILS --> PASS IN VIVADO
 BUG: Works in Vivado, fails in terminal. Simulation dies without being killed at 10064000 ticks.
 All 63 words are received by recv_pkt tile as needed (verified through waveforms).
-check_long_pkt.sh WILL fail until the bug above is resolved.
+Checkers pass after using the makefile and riscv.ld from c_fft_acc.
 
 ----------------------------------------------------------
 VIVADO
 
 Similar to previous testcases, but for vivado
--mosaic_2x2_vivado.pl : GOOD, June 2026
--mosaic_2x2_tile_mem_mgr_vivado.pl : GOOD, June 2026
+-mosaic_2x2_vivado.pl : GOOD
+-mosaic_2x2_tile_mem_mgr_vivado.pl : GOOD
 
--mosaic_2x2_ddr4_8cache_vivado.pl : GOOD, June 2026
+-mosaic_2x2_ddr4_8cache_vivado.pl : GOOD
 Shows how to modify the cache size.
 
--mosaic_2x2_ddr4_pkt_vivado.pl : GOOD, August 2026
+-mosaic_2x2_ddr4_pkt_vivado.pl : GOOD
 It is a very fast test, the PICOs don't do anything
 It only injects packets that go to the tile 
 memory manager
 
--mosaic_2x2_u250.pl : GOOD, August 2026
+-mosaic_2x2_u250.pl : GOOD
 Shows how to setup the development board.
 
 -mosaic_cache.pl
