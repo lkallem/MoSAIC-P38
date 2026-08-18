@@ -31,11 +31,11 @@ echo "###########################################"
 echo 1 | sudo tee /sys/bus/pci/devices/0000\:d7\:00.0/0000\:d8\:00.0/remove
 echo 1 | sudo tee /sys/bus/pci/devices/0000\:d7\:00.0/0000\:d8\:00.1/remove
 
-#- Source Vivado setup script
-source /opt/source-vitis-2022.2.sh
+#- Source Vivado setup script for wmaximoff
+source /tools/source-vitis.sh 2022.2
 
 #- Program FPGA
-vivado -mode batch -source program_card.tcl  
+vivado -mode batch -source program_card.tcl -tclargs -board u250
 
 #- After programming
 echo 1 | sudo tee /sys/bus/pci/devices/0000\:d7\:00.0/rescan
