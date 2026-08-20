@@ -139,6 +139,7 @@ logic inst_q_put_d;
 logic inst_m_put_h;
 logic inst_m_put_d;
 logic inst_m_get_h; //Jul 14 2023
+logic inst_m_get_d;
 
 logic inst_m_put_r;
 logic inst_m_get_r; 
@@ -151,6 +152,7 @@ logic inst_m_get_h_r; //Jul 14 2023
 logic inst_m_get_d_r; //Jul 14 2023
 
 logic [2:0] pcpi_code;
+logic [2:0] pcpi_code_int;
 
 logic fifo_2B_en;
 logic [31:0] fifo_2B_din;
@@ -164,11 +166,13 @@ logic stream_out_pcpi_TVALID_int;
 logic   [31:0] stream_out_pcpi_TDATA_int; 
 logic stream_out_pcpi_TLAST_int;
 logic [3:0] stream_out_pcpi_TKEEP_int;
+logic stream_out_pcpi_TREADY_int;
 
 logic stream_out_mem_TVALID_int;
 logic   [31:0] stream_out_mem_TDATA_int; 
 logic stream_out_mem_TLAST_int;
 logic [3:0] stream_out_mem_TKEEP_int;
+logic stream_out_mem_TREADY_int;
 
 logic [OFFSET_SZ-1:0] pcpi_offset_short; //- Header fields
 logic      [XY_SZ-1:0] pcpi_x_dest;
@@ -188,6 +192,7 @@ always @(posedge clk_ctrl) begin
    if (currentState2 == IDLE_S & inst_valid) begin
       pcpi_rs1_int  <= pcpi_rs1;
       pcpi_rs2_int  <= pcpi_rs2;
+      pcpi_code_int <= pcpi_insn[14:12];
       inst_q_put_r <= inst_q_put;
       inst_m_put_r <= inst_m_put;
       inst_m_get_r <= inst_m_get;
@@ -231,7 +236,29 @@ always @(posedge clk_ctrl or negedge clk_ctrl_rst_low) begin
 end
 
 assign pcpi_idle = currentState2 == IDLE_S;
-assign pcpi_code = pcpi_insn[14:12]; //- assumes QM is the same as QPUT
+assign pcpi_code = pcpi_code_int;
+
+//- Preserve the destination while the registered packet is sent.
+always_ff @(posedge clk_ctrl or negedge clk_ctrl_rst_low) begin
+   if (!clk_ctrl_rst_low) begin
+      pcpi_x_dest <= '0;
+      pcpi_y_dest <= '0;
+   end else if (currentState2 == IDLE_S) begin
+      if (inst_q_put || inst_q_put_h || inst_q_put_d) begin
+         pcpi_x_dest <= pcpi_rs1[XY_SZ-1:0];
+         pcpi_y_dest <= pcpi_rs1[(2*XY_SZ)-1:XY_SZ];
+      end else if (inst_m_put   || inst_m_put_h ||
+                   inst_m_get   || inst_m_get_h ||
+                   inst_m_put_d || inst_m_get_d) begin
+         pcpi_x_dest <=
+            pcpi_rs1[OFFSET_SZ+XY_SZ-1:OFFSET_SZ];
+         pcpi_y_dest <=
+            pcpi_rs1[OFFSET_SZ+(2*XY_SZ)-1:
+                     OFFSET_SZ+XY_SZ];
+      end
+   end
+end
+
 always @( * ) begin
    //- State
    nextState2 = currentState2;
@@ -278,45 +305,12 @@ always @( * ) begin
             *         and issue two gets to obtain the data??? */
            fifo_0B_en = 1'b1;
            nextState2  = QGET1_S;
-        end else begin /*Generate Packets*/ 
-           if (inst_q_put | inst_q_put_h | inst_q_put_d) begin
-              if (stream_out_pcpi_TREADY_int) begin
-                 fifo_2B_en  = 1'b1;
-                 pcpi_ready  = 1'b1;
-                 nextState2 = QPUT_DATA_S;
-                 pcpi_x_dest = pcpi_rs1[XY_SZ-1:0];
-                 pcpi_y_dest = pcpi_rs1[(2*XY_SZ)-1:XY_SZ]; // LPGG May 26 2023
-                 if (inst_q_put) //- Short packet
-                    fifo_2B_din = pcpi_header;
-                 else if (inst_q_put_h) begin //- Long header
-                    pcpi_pkt_code = pcpi_rs2[3:0];
-                    next_pkt_size_qput = 1 << (pcpi_rs2-1);
-                    fifo_2B_din = pcpi_header1;
-                 end else //- Data for long header
-                    fifo_2B_din = pcpi_rs1;
-              end
-           end else if (inst_m_put | inst_m_put_h | inst_m_get | inst_m_get_h | inst_m_put_d | inst_m_get_d) begin
-              if (stream_out_mem_TREADY_int) begin
-                 nextState2 = SEND2_S;
-                 pcpi_x_dest = pcpi_rs1[OFFSET_SZ+XY_SZ-1:OFFSET_SZ];
-                 pcpi_y_dest = pcpi_rs1[OFFSET_SZ+(2*XY_SZ)-1:OFFSET_SZ+XY_SZ];
-                 stream_out_mem_TVALID_int = 1'b1;
-                 if (inst_m_put | inst_m_get) //- Short packer
-                      stream_out_mem_TDATA_int = pcpi_header;
-                 else if (inst_m_put_h | inst_m_get_h) begin //- Long header
-                    if (inst_m_get_h) begin //- Long header
-                       pcpi_pkt_code = 1;
-                       pcpi_pkt_code_get = pcpi_rs2[3:0];
-                       next_pkt_size_qput = 1;
-                    end else begin
-                       pcpi_pkt_code = pcpi_rs2[3:0];
-                       next_pkt_size_qput = 1 << (pcpi_rs2-1);
-                    end
-                      stream_out_mem_TDATA_int = pcpi_header1;
-                 end else //- Data for long header
-                      stream_out_mem_TDATA_int = pcpi_rs1;
-               end else pcpi_wait = 1'b1;
-           end
+        end else if (inst_q_put || inst_q_put_h || inst_q_put_d) begin
+           nextState2 = QPUT_S;
+        end else if (inst_m_put || inst_m_put_h ||
+                    inst_m_get || inst_m_get_h ||
+                    inst_m_put_d || inst_m_get_d) begin
+           nextState2 = SEND_S;
         end
      end
      QWAIT0_S: begin
@@ -361,7 +355,7 @@ always @( * ) begin
         nextState2        = IDLE_S;
         pcpi_ready        = 1'b1;
         if (inst_q_put_r | inst_q_put_d_r) begin
-           fifo_2B_din       = pcpi_rs2;
+           fifo_2B_din       = pcpi_rs2_int;
            if (inst_q_put_r) 
                stream_out_pcpi_TLAST_int = 1'h1; //LPGG May 18 2023 !!
            else begin // q_put_d
@@ -396,6 +390,51 @@ always @( * ) begin
         pcpi_wait  = 1'b0;
         pcpi_ready = 1'b1;
         nextState2 = IDLE_S;
+      end
+
+      QPUT_S: begin
+         if (stream_out_pcpi_TREADY_int) begin
+            fifo_2B_en = 1'b1;
+
+            if (inst_q_put_r)
+               fifo_2B_din = pcpi_header;
+            else if (inst_q_put_h_r) begin
+               pcpi_pkt_code = pcpi_rs2_int[3:0];
+               next_pkt_size_qput = 1 << (pcpi_rs2_int-1);
+               fifo_2B_din = pcpi_header1;
+            end else if (inst_q_put_d_r)
+               fifo_2B_din = pcpi_rs1_int;
+
+            pcpi_ready = 1'b1;
+            nextState2 = QPUT_DATA_S;
+         end else begin
+            pcpi_wait = 1'b1;
+         end
+      end
+
+      SEND_S: begin
+         if (stream_out_mem_TREADY_int) begin
+            stream_out_mem_TVALID_int = 1'b1;
+
+            if (inst_m_put_r || inst_m_get_r)
+               stream_out_mem_TDATA_int = pcpi_header;
+            else if (inst_m_put_h_r || inst_m_get_h_r) begin
+               if (inst_m_get_h_r) begin
+                  pcpi_pkt_code = 1;
+                  pcpi_pkt_code_get = pcpi_rs2_int[3:0];
+                  next_pkt_size_qput = 1;
+               end else begin
+                  pcpi_pkt_code = pcpi_rs2_int[3:0];
+                  next_pkt_size_qput = 1 << (pcpi_rs2_int-1);
+               end
+               stream_out_mem_TDATA_int = pcpi_header1;
+            end else
+               stream_out_mem_TDATA_int = pcpi_rs1_int;
+
+            nextState2 = SEND2_S;
+         end else begin
+            pcpi_wait = 1'b1;
+         end
       end
    endcase
 end
@@ -451,7 +490,7 @@ assign stream_out_mem_TKEEP_int = 4'hF;
 
 //- Short header
 assign pcpi_hl_short       = 1'b0;
-assign pcpi_offset_short   = inst_q_put || inst_q_get ? 'h0 :  pcpi_rs1[OFFSET_SZ-1:0] ; 
+assign pcpi_offset_short   = inst_q_put_r ? 'h0 : pcpi_rs1_int[OFFSET_SZ-1:0];
 assign pcpi_header  = {3'h0,pcpi_hl_short,pcpi_code,pt,HsrcId,pcpi_offset_short,pcpi_y_dest,pcpi_x_dest};
 
 //- Long header

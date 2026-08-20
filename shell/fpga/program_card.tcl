@@ -36,7 +36,7 @@ puts "HW device: $device_name"
 #                                                   #
 #####################################################
 
-set bit_file "./shell/fpga/${board}_bit/open_nic_shell.bit"
+set bit_file "./${board}_bit/open_nic_shell.bit"
 
 #####################################################
 
